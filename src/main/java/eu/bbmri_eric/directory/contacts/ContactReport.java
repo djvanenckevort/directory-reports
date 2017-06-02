@@ -20,13 +20,14 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.xssf.usermodel.XSSFCell;
 import org.apache.poi.xssf.usermodel.XSSFRow;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -88,8 +89,12 @@ public class ContactReport {
                 }
                 builder.append(String.format("%s (%s)\n", c.getId(), c.getName()));
             }
-            builder.append(String.format("hosted in %s (%s)", previous.getId(), previous.getName()));
-            row.createCell(2).setCellValue(builder.toString());
+            builder.append(String.format("hosted in %s (%s)", previous.getBiobank().getId(), previous.getBiobank().getName()));
+            XSSFCell cell = row.createCell(2);
+            CellStyle cs = workbook.createCellStyle();
+            cs.setWrapText(true);    
+            cell.setCellStyle(cs);
+            cell.setCellValue(builder.toString());
             rowno += 1;
         }
     }
