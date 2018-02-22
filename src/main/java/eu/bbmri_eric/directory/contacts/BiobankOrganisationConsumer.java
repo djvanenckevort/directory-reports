@@ -43,7 +43,14 @@ public class BiobankOrganisationConsumer implements EntityConsumer {
     public void accept(Map<Attribute, String> t) {
         final String id = t.get(Attribute.from("id"));
         final String name = t.get(Attribute.from("name"));
-        final Contact contact = getContact(t.get(Attribute.from("contact")));
+        final String contactId = t.get(Attribute.from("contact"));
+        final Contact contact;
+        if (contactId != null) {
+            contact = getContact(contactId);
+        } else {
+            System.err.println(String.format("Contact is null for %s (%s)", name, id));
+            contact = null;
+        }
         final List<String> networkIDs = Arrays.asList(t.getOrDefault(Attribute.from("networks"), "").split(","));
         final List<BiobankNetwork> nets = networks.stream().filter(N -> networkIDs.contains(N.getId())).collect(Collectors.toList());
         final int contactPriority = Integer.valueOf(t.get(Attribute.from("contact_priority")));
@@ -56,7 +63,6 @@ public class BiobankOrganisationConsumer implements EntityConsumer {
     }
     
     public Contact getContact(String id) {
-        String contactID = id.split(",")[0];
-        return contacts.stream().filter(C -> contactID.equals(C.getId())).findFirst().get();
+        return contacts.stream().filter(C -> id.equals(C.getId())).findFirst().get();
     }
 }

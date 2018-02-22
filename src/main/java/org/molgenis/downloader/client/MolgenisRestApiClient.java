@@ -135,17 +135,22 @@ public class MolgenisRestApiClient implements MolgenisClient {
     @Override
     public final void streamEntityData(final String name, final List<Attribute> attributes, final EntityConsumer consumer) {
 
-        try {
-            JSONObject json;
-            if (attributes == null || attributes.isEmpty()) {
-                json = download(new URI(uri + "/api/v2/" + name));
-            } else {
-                final String attrs = attributes.stream().map(Attribute::getName).collect(Collectors.joining(","));
-                json = download(new URI(uri + "/api/v2/" + name + "?attrs=" + attrs));
-            }
 
+        try {
+            URI url;
+            JSONObject json;
+            // Get metadata first to have ID attribute for default sort
+            json = download(new URI(uri + "/api/v2/" + name + "?num=1"));
             final JSONObject meta = json.getJSONObject("meta");
             final Entity entity = entityFromJSON(meta);
+            final String sort = "sort=" + entity.getIdAttribute().getName() + ":asc";
+            if (attributes == null || attributes.isEmpty()) {
+                url = new URI(uri + "/api/v2/" + name + "?" + sort);
+            } else {
+                final String attrs = attributes.stream().map(Attribute::getName).collect(Collectors.joining(","));
+                url = new URI(uri + "/api/v2/" + name  + "?" + sort + "&attrs=" + attrs);
+            } 
+            json = download(url);
 
             String nextHref = null;
             do {
