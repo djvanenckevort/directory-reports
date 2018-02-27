@@ -16,6 +16,7 @@
 package eu.bbmri_eric.directory.contacts;
 
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -40,10 +41,10 @@ public class BiobankOrganisationConsumer implements EntityConsumer {
     }
 
     @Override
-    public void accept(Map<Attribute, String> t) {
-        final String id = t.get(Attribute.from("id"));
-        final String name = t.get(Attribute.from("name"));
-        final String contactId = t.get(Attribute.from("contact"));
+    public void accept(Map<Attribute, String> biobank) {
+        final String id = biobank.get(Attribute.from("id"));
+        final String name = biobank.get(Attribute.from("name"));
+        final String contactId = biobank.get(Attribute.from("contact"));
         final Contact contact;
         if (contactId != null) {
             contact = getContact(contactId);
@@ -51,11 +52,18 @@ public class BiobankOrganisationConsumer implements EntityConsumer {
             System.err.println(String.format("Contact is null for %s (%s)", name, id));
             contact = null;
         }
-        final List<String> networkIDs = Arrays.asList(t.getOrDefault(Attribute.from("networks"), "").split(","));
+        final List<String> networkIDs = Arrays.asList(biobank.getOrDefault(Attribute.from("networks"), "").split(","));
         final List<BiobankNetwork> nets = networks.stream().filter(N -> networkIDs.contains(N.getId())).collect(Collectors.toList());
-        final int contactPriority = Integer.valueOf(t.get(Attribute.from("contact_priority")));
-        final BiobankOrganisation biobank = new BiobankOrganisation(id, name, contact, nets, contactPriority);
-        biobanks.add(biobank);
+        int contactPriority = Integer.valueOf(biobank.get(Attribute.from("contact_priority")));
+        final int maxNetworkContactPriority = nets.stream().max(new PriorityComparator()).map(N -> N.getContactPriority()).orElse(0);
+        if (contactPriority == maxNetworkContactPriority && contactPriority > 0) {
+            System.err.println("Contact priority for the biobank and network is equal, ignoring networks to break the tie.");
+            final BiobankNetwork network = nets.stream().max(new PriorityComparator()).get();
+            System.err.println(String.format("Priority: %d; Network: %s  Biobank: %s", contactPriority, network.getId(), id));
+            nets.clear();
+        }
+        final BiobankOrganisation organisation = new BiobankOrganisation(id, name, contact, nets, contactPriority);
+        biobanks.add(organisation);
     }
 
     public Set<BiobankOrganisation> getBiobanks() {
@@ -64,5 +72,14 @@ public class BiobankOrganisationConsumer implements EntityConsumer {
     
     public Contact getContact(String id) {
         return contacts.stream().filter(C -> id.equals(C.getId())).findFirst().get();
+    }
+    
+    private static class PriorityComparator implements Comparator<BiobankNetwork> {
+
+        @Override
+        public int compare(BiobankNetwork lhs, BiobankNetwork rhs) {
+            return lhs.getContactPriority() - rhs.getContactPriority();
+        }
+        
     }
 }
