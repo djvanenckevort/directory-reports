@@ -62,8 +62,10 @@ public class ContactReport {
             XSSFRow row = sheet.createRow(rowno);
             row.createCell(0).setCellValue(collection.getId());
             Contact contact = getContactWithHighestPriority(candidates);
-            row.createCell(1).setCellValue(contact.getId());
-            row.createCell(2).setCellValue(contact.getEmail());
+            if (contact != null) {
+                row.createCell(1).setCellValue(contact.getId());
+                row.createCell(2).setCellValue(contact.getEmail());
+            }
             rowno += 1;
             List<BiobankCollection> list = contactToCollection.getOrDefault(contact, new ArrayList<>());
             list.add(collection);
@@ -78,8 +80,10 @@ public class ContactReport {
         for (Contact contact : contactToCollection.keySet()) {
             List<BiobankCollection> list = contactToCollection.get(contact);
             XSSFRow row = sheet.createRow(rowno);
-            row.createCell(0).setCellValue(contact.getId());
-            row.createCell(1).setCellValue(contact.getEmail());
+            if (contact != null) {
+                row.createCell(0).setCellValue(contact.getId());
+                row.createCell(1).setCellValue(contact.getEmail());
+            }
             List<BiobankCollection> sorted = list.stream().sorted((o1, o2) -> o1.getBiobank().getId().compareTo(o2.getBiobank().getId())).collect(Collectors.toList());
             BiobankCollection previous = sorted.get(0);
             StringBuilder builder = new StringBuilder();

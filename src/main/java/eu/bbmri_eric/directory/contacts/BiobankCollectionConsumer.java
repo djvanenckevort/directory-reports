@@ -47,14 +47,20 @@ public class BiobankCollectionConsumer implements EntityConsumer {
         final String id = t.get(Attribute.from("id"));
         final String name = t.get(Attribute.from("name"));
         final String biobankID = t.get(Attribute.from("biobank"));
-        int contactPrio = Integer.valueOf(t.get(Attribute.from("contact_priority")));
         final BiobankOrganisation biobank = biobanks.stream().filter(B -> biobankID.equals(B.getId())).findFirst().get();
-        final Contact contact = getContact(t.get(Attribute.from("contact")));
+        Contact contact = null;
+        int contactPrio = -1;
+        if (t.get(Attribute.from("contact")) != null) {
+            contact = getContact(t.get(Attribute.from("contact")));
+            contactPrio = Integer.valueOf(t.get(Attribute.from("contact_priority")));
+        } else {
+            System.err.println(String.format("Contact is null for %s", id));
+        }
         final String parentID = t.getOrDefault(Attribute.from("parent"), "");
         final BiobankCollection parent = collections.stream().filter(C -> parentID.equals(C.getId())).findFirst().orElse(null);
         final List<String> networkIDs = Arrays.asList(t.getOrDefault(Attribute.from("networks"), "").split(","));
         final List<BiobankNetwork> nets = networks.stream().filter(N -> networkIDs.contains(N.getId())).collect(Collectors.toList());
-        final int maxNetworkContactPriority = nets.stream().max(new PriorityComparator()).map(N -> N.getContactPriority()).orElse(0);
+        final int maxNetworkContactPriority = nets.stream().map(N -> N.getContact() == null ? -1 : N.getContactPriority()).max(Integer::max).orElse(-1);
         if (maxNetworkContactPriority == contactPrio && contactPrio > biobank.getContactPriority()) {
             System.err.println("Contact priority for the collection and network is equal, ignoring networks to break the tie.");
             final BiobankNetwork network = nets.stream().max(new PriorityComparator()).get();
@@ -81,7 +87,10 @@ public class BiobankCollectionConsumer implements EntityConsumer {
 
         @Override
         public int compare(BiobankNetwork lhs, BiobankNetwork rhs) {
-            return lhs.getContactPriority() - rhs.getContactPriority();
+            int lhsPriority = lhs.getContact() == null ? 0 : lhs.getContactPriority();
+            int rhsPriority = rhs.getContact() == null ? 0 : rhs.getContactPriority();
+
+            return lhsPriority - rhsPriority;
         }
         
     }
